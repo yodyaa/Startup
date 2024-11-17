@@ -773,7 +773,7 @@
                 const filterName = document.getElementById('order-filter-name').value.toLowerCase();
                 const filterStatus = document.getElementById('order-filter-status').value.toLowerCase();
                 const sortOrder = document.getElementById('order-sort-order').value;
-
+            
                 // Filter by name, status, and userId
                 orderFilteredData = orderTableData.filter(row => {
                     const matchesName = row.Name.toLowerCase().includes(filterName);
@@ -781,10 +781,10 @@
                     const matchesUserId = row.UserIDresponsible === orderCurrentUserId; // เงื่อนไขกรองตาม userId
                     return matchesName && matchesStatus && matchesUserId;
                 });
-
+            
                 // แยกข้อมูลเป็นสองกลุ่ม: เริ่มดำเนินการและเสร็จสิ้น
                 const pendingTasks = orderFilteredData.filter(row => row.Status.toLowerCase() !== 'เสร็จสิ้น');
-                orderCompletedData = orderTableData.filter(row => row.Status.toLowerCase() === 'เสร็จสิ้น');
+                orderCompletedData = orderFilteredData.filter(row => row.Status.toLowerCase() === 'เสร็จสิ้น');
 
                 // เรียงข้อมูลตามตัวเลือกการเรียงลำดับ
                 if (sortOrder === 'newest') {
