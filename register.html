@@ -8,11 +8,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+  <style>
+    
+    .bg-green {
+        background: #eff4e5;
+    }
+    .border-green {
+        border: 2px solid #33422b;
+        border-radius: 10px;
+    }
+    
+  </style>
 </head>
+	
 <body class="bg-slate-100 min-h-screen">
 <div class="max-w-md m-auto p-2">
         <form>
-            <div class="bg-white rounded-lg p-10">    
+            <div class="bg-green rounded-lg p-10">    
                 <div class="mb-5 text-center">
                     <div class="mx-auto w-32 h-32 mb-2 border rounded-lg relative bg-slate-100 mb-4 shadow-inset">
                         <img src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="Default Image" id="preview" class="h-32 w-32 object-cover rounded-lg">
@@ -31,10 +43,10 @@
                     <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="nameId" placeholder="ชื่อ-สกุล" name="nameId" required>
                 </div>
                 <div class="mb-4">
-                    <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="keynumberId" placeholder="รหัสพนักงาน" name="keynumberId" required>
+                    <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="keynumberId" placeholder="ตำแหน่ง" name="keynumberId" required>
                 </div>
                 <div class="mb-6">
-                    <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="keynumber2Id" placeholder="ตำแหน่ง" name="keynumber2Id" required>
+                    <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="keynumber2Id" placeholder="เบอร์ติดต่อ" name="keynumber2Id" required>
                 </div>
                 </div>
                 <button type="button" id="submitBtn" class="bg-slate-800 text-center w-full text-white py-4 px-4 rounded-lg hover:bg-blue-700">บันทึกข้อมูล</button>
