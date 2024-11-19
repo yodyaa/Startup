@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียนลูกค้า</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+<style>
+     .bg-green {
+        background: #33422b;
+     }
+    .border-green {
+        border: 2px solid #33422b;
+        border-radius: 10px;
+      }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <div class="max-w-md m-auto p-2">
+        <form>
+            <div class="bg-white rounded-lg p-10">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 rounded-lg flex justify-center items-center">
+                        <img src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png"
+                            alt="Profile Image" id="profileImage" class="w-10 h-10 bg-white rounded-lg ">
+                    </div>
+                    <div class="pr-4">
+                        <p class="text-slate-400 text-xs ">เชื่อมต่อข้อมูลลูกค้า</p>
+                        <input type="text"
+                        class="input-field w-full  bg-slate-200  text-slate-500 text-sm text-center rounded-lg"
+                        id="userlineId" placeholder="useridLine" name="useridLine">                    
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <div class="mb-4">
+                    </div>
+                    <div class="mb-4">
+                        <input type="text" class="input-field w-full border border-slate-300 p-2 text-md rounded-lg" id="contact" placeholder="เบอร์ติดต่อที่ลงทะเบียนไว้" name="contact" required>
+                    </div>
+                </div>
+                <button type="button" id="submitBtn" class="bg-green text-center w-full text-white py-3 px-3 rounded-lg hover:bg-green-600">ส่งข้อมูล</button>
+            </div>
+        </form>
+    </div>
+    <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+    <script>
+
+        // ลิ้งจาก ระบบสมาชิก
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxiCnjr5U8uYUWebDsJqEUK450-s23JU5VKtx-u3aLtUIzaFCNm1VBCX-lUPaQCW2qU/exec';
+        // Liff ไอดีไล์เรียกใช้หน้าข้อมูลส่วนตัว
+        const LIFF_ID = '2006578535-XNZgwn8y'; // LIFF ID
+
+
+        // ฟังก์ชันเริ่มต้น LIFF SDK
+        window.onload = function () {
+            initializeLiff();
+        };
+
+        // ฟังก์ชันสำหรับเริ่มต้น LIFF SDK
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: `${LIFF_ID}` });
+
+                if (liff.isLoggedIn()) {
+                    getUserProfile();
+                } else {
+                    liff.login();
+                }
+            } catch (error) {
+                console.error('LIFF Initialization failed:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Initialization Error',
+                    text: 'Failed to initialize LINE LIFF. Please try again later.',
+                });
+            }
+        }
+
+        // ฟังก์ชันสำหรับดึงข้อมูลโปรไฟล์ของผู้ใช้
+        async function getUserProfile() {
+            try {
+                const profile = await liff.getProfile();
+                document.getElementById('userlineId').value = profile.userId;
+                document.getElementById('displayName').value = profile.displayName;
+                document.getElementById('profileImage').src = profile.pictureUrl || DEFAULT_IMAGE_URL;
+            } catch (error) {
+                console.error('เกิดข้อผิดพลาดในการดึงข้อมูลโปรไฟล์:', error);
+            }
+        }
+
+        let url = `${WEB_APP_URL}`;
+        let userlineIdInput = document.getElementById("userlineId");
+        let contactInput = document.getElementById("contact");
+        let submitBtn = document.getElementById("submitBtn");
+
+        // ฟังก์ชันสำหรับตรวจสอบการกรอกข้อมูลในฟิลด์ที่จำเป็น
+        function validateForm() {
+            const useridLine = userlineIdInput.value.trim();
+
+            const contact = contactInput.value.trim();
+
+            if (useridLine === '' || contact === '') {
+                return false;
+            }
+            return true;
+        }
+
+        // เพิ่ม event listener สำหรับปุ่มบันทึกข้อมูล
+        submitBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+
+            if (!validateForm()) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'กรุณากรอกข้อมูลในช่องที่จำเป็น.',
+                });
+                return;
+            }
+
+            const isConfirmed = await showConfirmationDialog();
+
+            if (isConfirmed) {
+                submitBtn.disabled = true;
+
+                try {
+                    let obj = {
+                        useridLine: userlineIdInput.value,
+                        contact: contactInput.value
+
+                    };
+
+                    Swal.fire({
+                        title: 'กำลังบันทึก, รอสักครู่...',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    let response = await fetch(url, {
+                        method: "POST",
+                        body: JSON.stringify(obj)
+                    });
+
+                    let data = await response.text();
+
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: 'บันทึกข้อมูลของคุณเรียบร้อย!',
+                        icon: 'success',
+                        confirmButtonText: 'ปิด',
+                    });
+
+                    console.log(data);
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'เกิดข้อผิดพลาดขณะส่งข้อมูล.',
+                    });
+
+                    console.error(error);
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            } else {
+                Swal.fire('Submission Canceled', 'ข้อมูลของคุณไม่ได้ถูกส่ง.', 'info');
+            }
+        });
+
+        // ฟังก์ชันสำหรับแสดงกล่องยืนยัน
+        async function showConfirmationDialog() {
+            const confirmation = await Swal.fire({
+                title: 'ยืนยันการส่งข้อมูล',
+                text: 'แน่ใจ ว่าคุณกำลังส่งข้อมูล?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ส่งข้อมูล!',
+                cancelButtonText: 'ไม่, ยกเลิก'
+            });
+
+            return confirmation.isConfirmed;
+        }
+    </script>
+</body>
+
+</html>
