@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>แสดงข้อมูลงานตามทีม</title>
+  <script src="https://cdn.tailwindcss.com" defer></script>
+  <!-- SweetAlert2 สำหรับแสดงรายละเอียด -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2.1/liff.js"></script>
+  <style>
+    /* Loading Overlay */
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #33422b;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay">
+    <div class="loader"></div>
+  </div>
+  
+  <div class="container mx-auto p-6">
+    <h2 class="text-2xl font-bold mb-4">รายการงานตามทีม</h2>
+    
+    <!-- Filter Controls -->
+    <div class="mb-4 grid grid-cols-3 gap-2">
+      <div>
+        <label for="filterDate" class="block text-sm font-medium text-gray-700">วันที่</label>
+        <input type="date" id="filterDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" onchange="onFilterChange()">
+      </div>
+      <div>
+        <label for="filterStatus" class="block text-sm font-medium text-gray-700">สถานะ</label>
+        <select id="filterStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" onchange="onFilterChange()">
+          <option value="">ทั้งหมด</option>
+          <option value="รอดำเนินการ">รอดำเนินการ</option>
+          <option value="เริ่มดำเนินการ">เริ่มดำเนินการ</option>
+          <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+      </div>
+      <div>
+        <button onclick="applyFilters()" class="bg-[#33422b] text-white px-4 py-3 rounded">กรองข้อมูล</button>
+      </div>
+    </div>
+    
+    <!-- Card view สำหรับสถานะ "รอดำเนินการ" และ "เริ่มดำเนินการ" -->
+    <div id="cardContainer" class="grid grid-cols-1 gap-4 mb-6"></div>
+    
+    <!-- Table view สำหรับข้อมูลที่เหลือ -->
+    <div id="tableContainer">
+      <table class="min-w-full border">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="py-2 px-4 border">วันที่</th>
+            <th class="py-2 px-4 border">ชื่อลูกค้า</th>
+            <th class="py-2 px-4 border">รายละเอียด</th>
+          </tr>
+        </thead>
+        <tbody id="tableData"></tbody>
+      </table>
+      <!-- Pagination Controls -->
+      <div id="paginationContainer" class="mt-4"></div>
+    </div>
+  </div>
+  
+  <script>
+    // กำหนด LIFF ID และ URL ของ GAS API (Web App)
+    const LIFF_ID = "2006578535-YreM765V"; // ปรับเป็น LIFF ID ของคุณ
+    const DEPLOYMENT_URL = "https://script.google.com/macros/s/AKfycbypGiDYblfByxtk8Sq_eAnR0Z5-SWmxtyC6b9OzDMPRu5CBv2dnnVD9XXe14IUP-tg/exec"; // ปรับเป็น URL ของ GAS Web App ของคุณ
+
+    let allData = [];     // ข้อมูลทั้งหมดจาก GAS API
+    let filteredData = []; // ข้อมูลหลังจากกรอง
+    let currentPageTable = 1;
+    const rowsPerPage = 10;
+
+    function showLoading() {
+      document.getElementById('loadingOverlay').style.display = "flex";
+    }
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = "none";
+    }
+    
+    function onFilterChange() {
+      console.log("Filter changed - Date:", document.getElementById("filterDate").value,
+                  "Status:", document.getElementById("filterStatus").value);
+    }
+    
+    // เมื่อคลิกปุ่ม "กรองข้อมูล" อ่านค่า filter แล้วกรองข้อมูลจาก allData
+    function applyFilters() {
+      const filterDate = document.getElementById("filterDate").value; // รูปแบบ YYYY-MM-DD
+      const filterStatus = document.getElementById("filterStatus").value;
+      
+      console.log("Applying filters - Date:", filterDate, "Status:", filterStatus);
+      
+      filteredData = allData.filter(item => {
+        let dateMatch = true;
+        let statusMatch = true;
+        if (filterDate) {
+          // แปลง filterDate จาก YYYY-MM-DD เป็น dd/MM/yyyy
+          const parts = filterDate.split("-");
+          const formattedFilterDate = parts[2] + "/" + parts[1] + "/" + parts[0];
+          dateMatch = (item.Date === formattedFilterDate);
+        }
+        if (filterStatus) {
+          statusMatch = (item.Status === filterStatus);
+        }
+        return dateMatch && statusMatch;
+      });
+      console.log("Filtered data:", filteredData);
+      currentPageTable = 1; // reset page
+      displayData();
+    }
+    
+    // ฟังก์ชันแสดงข้อมูลทั้งใน Card view และ Table view
+    function displayData() {
+      // ตรวจสอบว่ามีการตั้งค่าตัวกรองหรือไม่
+      const filterDate = document.getElementById("filterDate").value;
+      const filterStatus = document.getElementById("filterStatus").value;
+      const hasFilter = filterDate !== "" || filterStatus !== "";
+      
+      // ถ้ามี filter ให้ใช้ filteredData (ถ้าไม่มีข้อมูลตรงกับ filter จะเป็นอาร์เรย์ว่าง)
+      const dataToDisplay = hasFilter ? filteredData : allData;
+      console.log("Displaying data:", dataToDisplay);
+      
+      // แบ่งข้อมูลออกเป็นการ์ดกับตาราง
+      const cardItems = dataToDisplay.filter(item => item.Status === "รอดำเนินการ" || item.Status === "เริ่มดำเนินการ");
+      const tableItems = dataToDisplay.filter(item => !(item.Status === "รอดำเนินการ" || item.Status === "เริ่มดำเนินการ"));
+      
+      // แสดงการ์ด
+      const cardContainer = document.getElementById("cardContainer");
+      cardContainer.innerHTML = "";
+      cardItems.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "bg-white shadow rounded-lg p-4";
+        card.innerHTML = `
+          <div class="mb-2"><span class="font-bold text-gray-600">วันที่:</span> ${item.Date}</div>
+          <div class="mb-2"><span class="font-bold text-gray-600">ชื่อลูกค้า:</span> ${item.Name}</div>
+          <div class="mb-2"><span class="font-bold text-gray-600">สถานะ:</span> ${item.Status}</div>
+          <div class="flex space-x-2">
+            <button class="bg-[#33422b] text-white px-3 py-1 rounded" onclick='showDetails(${JSON.stringify(item)})'>รายละเอียด</button>
+            <button class="bg-green-500 text-white px-3 py-1 rounded" onclick='viewData("${item.IDkey}")'>สถานะดำเนินการ</button>
+          </div>
+        `;
+        cardContainer.appendChild(card);
+      });
+      
+      // แสดงข้อมูลในตารางโดยใช้ pagination
+      displayTable(tableItems);
+      renderPagination(tableItems);
+    }
+    
+    // แสดงข้อมูลในตาราง (เฉพาะ 3 คอลัมน์) ด้วย pagination
+    function displayTable(tableItems) {
+      const tableBody = document.getElementById("tableData");
+      tableBody.innerHTML = "";
+      const start = (currentPageTable - 1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const paginatedItems = tableItems.slice(start, end);
+      
+      paginatedItems.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="py-2 px-4 border">${item.Date}</td>
+          <td class="py-2 px-4 border">${item.Name}</td>
+          <td class="py-2 px-4 border">
+            <button class="bg-[#33422b] text-white px-3 py-1 rounded" onclick='showDetails(${JSON.stringify(item)})'>รายละเอียด</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // ฟังก์ชัน renderPagination สร้างปุ่มกำกับหน้า
+    function renderPagination(tableItems) {
+      const paginationContainer = document.getElementById("paginationContainer");
+      paginationContainer.innerHTML = "";
+      const totalPages = Math.ceil(tableItems.length / rowsPerPage);
+      console.log("Total pages:", totalPages);
+      if (totalPages <= 1) return; // ถ้ามีเพียง 1 หน้า ไม่ต้องแสดง pagination
+      
+      // สร้างปุ่มหน้าต่างๆ
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.className = "bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1 px-3 rounded mx-1";
+        if (currentPageTable === i) {
+          btn.classList.add("bg-[#33422b]", "text-white");
+        }
+        btn.addEventListener("click", () => {
+          currentPageTable = i;
+          displayData();
+        });
+        paginationContainer.appendChild(btn);
+      }
+    }
+    
+    // ฟังก์ชันแสดงรายละเอียดข้อมูล (ใช้ SweetAlert2) พร้อม badge สำหรับดูแผนที่และเบอร์ติดต่อ
+    function showDetails(item) {
+      console.log("showDetails called with item:", item);
+      Swal.fire({
+        title: '<h2 style="font-size: 14px;">รายละเอียด</h2>',
+        html: `
+          <table style="width:100%; font-size:14px; text-align:left; border-collapse: collapse; border: 1px solid #ddd;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>เลขที่:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.IDkey}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>ชื่อ:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>แผนที่:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">
+                <a href="${item.Maplink}" target="_blank" class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs">ดูแผนที่</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>ชื่อหมู่บ้าน:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Village}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>วันที่:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Date}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>เบอร์ติดต่อ:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">
+                <a href="tel:${item.Contact}" class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">${item.Contact}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>สถานะ:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Status}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>รายละเอียด:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Detail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>บันทึกเพิ่มเติม:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Note}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>การชำระเงิน:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Payment}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>ผู้รับผิดชอบ:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Responsible}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>แอดมิน:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Admin}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>บันทึกแอดมิน:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.adminNote}</td>
+            </tr>
+          </table>
+        `,
+        confirmButtonText: "ปิดหน้าต่าง"
+      });
+    }
+    
+    // ฟังก์ชัน viewData สำหรับแสดงสถานะดำเนินการ (เพิ่ม log เพื่อตรวจสอบ)
+    function viewData(idkey) {
+      console.log("viewData called with idkey:", idkey);
+      showLoading();
+      fetch(`${DEPLOYMENT_URL}?action=getProcessData&idkey=${encodeURIComponent(idkey)}`)
+        .then(response => {
+          console.log("Response from getProcessData:", response);
+          return response.json();
+        })
+        .then(data => {
+          console.log("Data received for process data:", data);
+          hideLoading();
+          displayProcessData(data);
+        })
+        .catch(error => {
+          hideLoading();
+          console.error('Error fetching process data:', error);
+          Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดึงข้อมูลได้' });
+        });
+    }
+    
+    function displayProcessData(data) {
+      if (!data) {
+        Swal.fire("ไม่มีข้อมูล", "ไม่มีข้อมูลการดำเนินการสำหรับ ID นี้", "info");
+        return;
+      }
+      const parsedData = (typeof data === "string") ? JSON.parse(data) : data;
+      console.log("Displaying process data:", parsedData);
+      Swal.fire({
+        title: '<h2 style="font-size: 14px;">รายละเอียดการดำเนินการ</h2>',
+        html: `
+          <table style="width:100%; font-size:14px; text-align:left; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px;"><strong>เลขที่:</strong></td>
+              <td style="padding: 4px;">${parsedData.idkey || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>สถานะ:</strong></td>
+              <td style="padding: 4px;">${parsedData.status || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>เวลาเริ่มงาน:</strong></td>
+              <td style="padding: 4px;">${parsedData["time-inside"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>บันทึก:</strong></td>
+              <td style="padding: 4px;">${parsedData["inside-note"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>เวลาดำเนินการ:</strong></td>
+              <td style="padding: 4px;">${parsedData["time-process"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>บันทึก:</strong></td>
+              <td style="padding: 4px;">${parsedData["process-note"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>เวลาเสร็จสิ้น:</strong></td>
+              <td style="padding: 4px;">${parsedData["time-compress"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>บันทึก:</strong></td>
+              <td style="padding: 4px;">${parsedData["compress-note"] || ""}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px;"><strong>รูปภาพ:</strong></td>
+              <td style="padding: 4px;">${parsedData["compress-photo"] ? `<img src="${parsedData["compress-photo"]}" style="max-width:100%;" />` : ""}</td>
+            </tr>
+          </table>
+        `,
+        confirmButtonText: "ปิดหน้าต่าง"
+      });
+    }
+    
+    // เริ่มต้น LIFF และดึงข้อมูลจาก GAS API เมื่อหน้าโหลด
+    function initializeLiff() {
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          if (!liff.isLoggedIn()) {
+            console.log("User not logged in, calling liff.login()");
+            liff.login();
+          } else {
+            liff.getProfile()
+              .then(profile => {
+                console.log("LIFF profile obtained:", profile);
+                const lineId = profile.userId;
+                showLoading();
+                fetch(`${DEPLOYMENT_URL}?action=getJobDataByTeam&lineId=${encodeURIComponent(lineId)}`)
+                  .then(response => {
+                    console.log("Response from getJobDataByTeam:", response);
+                    return response.json();
+                  })
+                  .then(data => {
+                    console.log("Data received for job data:", data);
+                    hideLoading();
+                    allData = data;
+                    // เมื่อมีข้อมูลให้กรองทันทีตามค่า filter (ถ้าปล่อยว่างจะไม่กรอง)
+                    currentPageTable = 1;
+                    applyFilters();
+                  })
+                  .catch(error => {
+                    hideLoading();
+                    console.error('Error loading job data by team:', error);
+                  });
+              })
+              .catch(err => console.error('Error getting LIFF profile:', err));
+          }
+        })
+        .catch(err => console.error('LIFF initialization failed:', err));
+    }
+    
+    window.onload = initializeLiff;
+  </script>
+</body>
+</html>
