@@ -41,8 +41,7 @@
         `;
       }
     });
-  </script> 
-
+  </script>
   <style>
     .bg-green-custom {
       background: #FFFFFF;
@@ -95,8 +94,8 @@
     </div>
     <!-- Tab Content -->
     <div id="tab-order-content">
-      <!-- (ส่วนของ Order Management ไม่เปลี่ยนแปลง) -->
-      <!-- ... -->
+      <!-- Content สำหรับการจัดการ Order (โค้ดที่คุณมีอยู่) -->
+      <!-- ... (โค้ดสำหรับ Order Management) ... -->
     </div>
 
     <div id="tab-operation-content" class="hidden">
@@ -208,7 +207,7 @@
         </div>
       </div>
 
-      <!-- Modal กำลังเริ่มงาน (ขั้นตอนใหม่) -->
+      <!-- Modal กำลังเริ่มงาน -->
       <div id="operation-start-work-modal"
         class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-lg w-full max-w-md overflow-y-auto max-h-full">
@@ -278,62 +277,529 @@
     </div>
   </div>
 
-  <script>
-    /* Tab Switching Logic */
-    document.addEventListener('DOMContentLoaded', function () {
-      const tabOrder = document.getElementById('tab-order');
-      const tabOperation = document.getElementById('tab-operation');
-      const tabOrderContent = document.getElementById('tab-order-content');
-      const tabOperationContent = document.getElementById('tab-operation-content');
+<script>
+        /* Tab Switching Logic */
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabOrder = document.getElementById('tab-order');
+            const tabOperation = document.getElementById('tab-operation');
+            const tabOrderContent = document.getElementById('tab-order-content');
+            const tabOperationContent = document.getElementById('tab-operation-content');
 
-      // ฟังก์ชันเพื่อเปิดใช้งานแท็บ
-      function activateTab(tab) {
-        if (tab === 'order') {
-          tabOrder.classList.add('active-tab');
-          tabOrder.classList.remove('inactive-tab');
-          tabOperation.classList.add('inactive-tab');
-          tabOperation.classList.remove('active-tab');
+            // ฟังก์ชันเพื่อเปิดใช้งานแท็บ
+            function activateTab(tab) {
+                if (tab === 'order') {
+                    // เปลี่ยนคลาสแท็บ
+                    tabOrder.classList.add('active-tab');
+                    tabOrder.classList.remove('inactive-tab');
+                    tabOperation.classList.add('inactive-tab');
+                    tabOperation.classList.remove('active-tab');
 
-          tabOrderContent.classList.remove('hidden');
-          tabOperationContent.classList.add('hidden');
+                    // แสดงเนื้อหาของแท็บที่ถูกเลือกและซ่อนแท็บอื่นๆ
+                    tabOrderContent.classList.remove('hidden');
+                    tabOperationContent.classList.add('hidden');
 
-          if (!window.orderInitialized) {
-            window.orderInitialize();
-          }
-        } else if (tab === 'operation') {
-          tabOperation.classList.add('active-tab');
-          tabOperation.classList.remove('inactive-tab');
-          tabOrder.classList.add('inactive-tab');
-          tabOrder.classList.remove('active-tab');
+                    // โหลดข้อมูลการสั่งซื้อ (ถ้ายังไม่ถูกโหลด)
+                    if (!window.orderInitialized) {
+                        window.orderInitialize();
+                    }
+                } else if (tab === 'operation') {
+                    // เปลี่ยนคลาสแท็บ
+                    tabOperation.classList.add('active-tab');
+                    tabOperation.classList.remove('inactive-tab');
+                    tabOrder.classList.add('inactive-tab');
+                    tabOrder.classList.remove('active-tab');
 
-          tabOperationContent.classList.remove('hidden');
-          tabOrderContent.classList.add('hidden');
+                    // แสดงเนื้อหาของแท็บที่ถูกเลือกและซ่อนแท็บอื่นๆ
+                    tabOperationContent.classList.remove('hidden');
+                    tabOrderContent.classList.add('hidden');
 
-          if (!window.operationInitialized) {
-            window.operationInitialize();
-          }
-        }
-      }
+                    // โหลดข้อมูลการดำเนินการ (ถ้ายังไม่ถูกโหลด)
+                    if (!window.operationInitialized) {
+                        window.operationInitialize();
+                    }
+                }
+            }
 
-      tabOrder.addEventListener('click', function () {
-        activateTab('order');
-      });
-      tabOperation.addEventListener('click', function () {
-        activateTab('operation');
-      });
-      activateTab('order');
+            // เพิ่ม Event Listeners สำหรับปุ่มแท็บ
+            tabOrder.addEventListener('click', function () {
+                activateTab('order');
+            });
+
+            tabOperation.addEventListener('click', function () {
+                activateTab('operation');
+            });
+
+            // โหลดข้อมูลแท็บเริ่มต้น
+            activateTab('order');
+        });
+    </script>
+    <script>
+        /* -------------------- HTML1 Scripts (Order Management) -------------------- */
+        (function () {
+            const WEB_APP_URL_ORDER = 'https://script.google.com/macros/s/AKfycbxDoJxNMYZSM6LL7XLy86T0oXfEZPFmDfZbYGTf7-HO9ffWj5BKZPrP1M2bTLUfynE/exec'; // เปลี่ยนเป็น URL ของ Google Apps Script Web App ของคุณ
+            const LIFF_ID_ORDER = '2006578535-AJ8L642w'; // เปลี่ยนเป็น LIFF ID ของคุณ
+
+            let orderTableData = [];
+            let orderFilteredData = [];
+            let orderCompletedData = [];
+            let orderCurrentUserId = ''; // ตัวแปรเก็บ userId ปัจจุบัน
+            let currentOrderPage = 1;
+            const orderRowsPerPage = 10;
+            let orderTotalPages = 1;
+            let isOrderSubmitting = false; // ป้องกันการส่งข้อมูลซ้ำ
+
+            async function orderInitializeLiff() {
+                try {
+                    await liff.init({ liffId: LIFF_ID_ORDER });
+                    if (liff.isLoggedIn()) {
+                        orderGetUserProfile();
+                    } else {
+                        liff.login();
+                    }
+                } catch (error) {
+                    console.error('LIFF Initialization failed', error);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเริ่มต้น LIFF ได้' });
+                }
+            }
+
+            async function orderGetUserProfile() {
+                try {
+                    const profile = await liff.getProfile();
+                    const userId = profile.userId;
+                    orderCurrentUserId = userId;
+                    console.log('User ID:', userId);
+                    orderFetchData(userId);
+                } catch (error) {
+                    console.error('Error getting profile data:', error);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดึงข้อมูลโปรไฟล์ผู้ใช้ได้' });
+                }
+            }
+
+            async function orderFetchData(userId) {
+                document.getElementById('order-loading-message').style.display = 'block';
+                try {
+                    const response = await fetch(`${WEB_APP_URL_ORDER}?sheet=Data`);
+                    const result = await response.json();
+                    if (result.success) {
+                        orderTableData = result.data;
+                        console.log('Data fetched:', orderTableData);
+                        orderApplyFilters();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: result.message });
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลได้' });
+                } finally {
+                    document.getElementById('order-loading-message').style.display = 'none';
+                }
+            }
+
+            function orderDisplayCards(data) {
+                const cardContainer = document.querySelector('#order-card-container');
+                cardContainer.innerHTML = '';
+
+                if (data.length === 0) {
+                    cardContainer.innerHTML = '<p class="text-center text-gray-500">ไม่มีข้อมูลที่จะแสดง</p>';
+                    return;
+                }
+
+                data.forEach(row => {
+                    const card = document.createElement('div');
+                    card.className = 'border border-green-700 rounded-lg p-4 mb-4 shadow-md bg-white';
+
+                    const topRow = document.createElement('div');
+                    topRow.className = 'grid grid-cols-3 gap-4 mb-4';
+
+                    const dateDiv = document.createElement('div');
+                    dateDiv.className = 'text-xs text-gray-500';
+                    dateDiv.textContent = 'วันที่';
+                    const dateValue = document.createElement('div');
+                    dateValue.className = 'text-sm text-gray-800';
+                    dateValue.textContent = orderFormatDate(row.Date);
+
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'text-xs text-gray-500';
+                    nameDiv.textContent = 'ชื่อ';
+                    const nameValue = document.createElement('div');
+                    nameValue.className = 'text-sm text-gray-800';
+                    nameValue.textContent = row.Name;
+
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'text-xs text-gray-500';
+                    statusDiv.textContent = 'สถานะ';
+                    const statusValue = document.createElement('div');
+                    statusValue.className = 'text-sm text-gray-800';
+                    statusValue.textContent = orderTranslateStatus(row.Status);
+
+                    const dateContainer = document.createElement('div');
+                    dateContainer.appendChild(dateDiv);
+                    dateContainer.appendChild(dateValue);
+                    topRow.appendChild(dateContainer);
+
+                    const nameContainer = document.createElement('div');
+                    nameContainer.appendChild(nameDiv);
+                    nameContainer.appendChild(nameValue);
+                    topRow.appendChild(nameContainer);
+
+                    const statusContainer = document.createElement('div');
+                    statusContainer.appendChild(statusDiv);
+                    statusContainer.appendChild(statusValue);
+                    topRow.appendChild(statusContainer);
+
+                    const bottomRow = document.createElement('div');
+                    bottomRow.className = 'grid grid-cols-3 gap-4 text-sm';
+
+                    const detailsButton = document.createElement('button');
+                    detailsButton.className = 'bg-purple-700 text-white py-2 px-4 rounded-lg hover:bg-purple-800 transition w-full';
+                    detailsButton.textContent = 'รายละเอียด';
+                    detailsButton.onclick = () => orderViewDetails(row.IDkey);
+                    detailsButton.setAttribute('aria-label', `ดูรายละเอียดของงาน ${row.Name}`);
+
+                    const editButton = document.createElement('button');
+                    editButton.className = 'bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition w-full';
+                    editButton.textContent = 'แจ้งเรื่อง';
+                    editButton.onclick = () => orderOpenEditModal(row.IDkey);
+
+                    const isDisabled = ['ระหว่างเดินทาง','เริ่มดำเนินการ', 'เสร็จสิ้น'].includes(row.Status);
+                    const confirmButton = document.createElement('button');
+                    confirmButton.className = `bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition w-full ${isDisabled ? 'disabled-button' : ''}`;
+                    confirmButton.textContent = 'ยืนยันรับงาน';
+                    if (!isDisabled) {
+                        confirmButton.onclick = () => orderTakeJob(row.IDkey);
+                    }
+                    confirmButton.disabled = isDisabled;
+
+                    bottomRow.appendChild(detailsButton);
+                    bottomRow.appendChild(editButton);
+                    bottomRow.appendChild(confirmButton);
+
+                    card.appendChild(topRow);
+                    card.appendChild(bottomRow);
+                    cardContainer.appendChild(card);
+                });
+            }
+
+            function orderDisplayCompletedTable(data) {
+                const tableBody = document.querySelector('#order-completed-table tbody');
+                tableBody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="py-2 px-4 border text-center text-gray-500">ไม่มีงานที่ดำเนินการเสร็จสิ้น</td></tr>';
+                    return;
+                }
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+            <td class="py-2 px-4 border text-center">${row.Name}</td>
+            <td class="py-2 px-4 border text-center">${orderTranslateStatus(row.Status)}</td>
+            <td class="flex justify-between text-xs py-2 px-4 border text-center">
+              <button class="bg-purple-700 text-white py-2 px-3 mr-1 rounded-lg hover:bg-purple-800 transition" onclick="orderViewDetails('${row.IDkey}')">รายละเอียด</button>
+              <button class="bg-yellow-500 text-white py-2 px-3 rounded-lg hover:bg-yellow-600 transition" onclick="orderOpenEditModal('${row.IDkey}')">แจ้งเรื่อง</button>
+            </td>
+          `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            function orderTranslateStatus(status) {
+                switch (status.toLowerCase()) {
+                    case 'อนุมัติ': return 'อนุมัติ';
+                    case 'ยกเลิก': return 'ยกเลิก';
+                    case 'ปฏิเสธ': return 'ปฏิเสธ';
+                    case 'เริ่มดำเนินการ': return 'เริ่มดำเนินการ';
+                    case 'เสร็จสิ้น': return 'เสร็จสิ้น';
+                    default: return status;
+                }
+            }
+
+            function orderFormatDate(dateString) {
+                const date = new Date(dateString);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${day}/${month}/${year} ${hours}:${minutes}`;
+            }
+            window.orderViewDetails = function(idkey) {
+  const row = orderTableData.find(row => row.IDkey === idkey);
+  if (row) {
+    Swal.fire({
+      title: 'รายละเอียด',
+      html: `
+        <div style="text-align: left;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px; width: 40%;"><b>ID Key:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.IDkey}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>ชื่อ:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Name}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>ที่อยู่:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Address}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>Map Link:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <a href="${row.Maplink}" target="_blank" class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs">เปิดแผนที่</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>ชื่อหมู่บ้าน:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Village}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>วันที่:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${orderFormatDate(row.Date)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>รายละเอียด:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Detail}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>หมายเหตุ:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Note}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>เบอร์ติดต่อ:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <a href="tel:${row.Contact}" class="bg-green-500 text-white px-2 py-1 rounded-full text-xs">${row.Contact}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>การชำระเงิน:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Payment}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>สถานะ:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${orderTranslateStatus(row.Status)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>ผู้รับผิดชอบ:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Responsible}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>Admin:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.Admin}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;"><b>หมายเหตุ Admin:</b></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${row.adminNote}</td>
+            </tr>
+          </table>
+        </div>
+      `,
+      confirmButtonText: 'ปิด'
     });
-  </script>
-  <script>
-    /* -------------------- HTML1 Scripts (Order Management) -------------------- */
-    (function () {
-      // (โค้ดสำหรับ Order Management ไม่ได้มีการเปลี่ยนแปลง)
-      // ...
-      window.orderInitialize = function () {
-        // ...
-      };
-    })();
+  }
+}
 
+
+            window.orderOpenEditModal = function (idkey) {
+                const row = orderTableData.find(row => row.IDkey === idkey);
+                if (row) {
+                    document.getElementById('order-edit-idkey').value = row.IDkey;
+                    document.getElementById('order-edit-status').value = row.Status;
+                    // กำหนดค่าในช่อง "ชื่อผู้เกี่ยวข้อง"
+                    document.getElementById('order-edit-name').value = row.Name;
+                    document.getElementById('order-edit-responsible').value = row.Responsible;
+                    document.getElementById('order-edit-admin-note').value = row.adminNote;
+                    document.getElementById('order-edit-modal').classList.remove('hidden');
+                }
+            }
+
+            window.orderCloseModal = function () {
+                document.getElementById('order-edit-modal').classList.add('hidden');
+            }
+
+            document.getElementById('order-edit-form').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                const submitButton = this.querySelector("button[type=submit]");
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'กำลังอัพเดท...';
+
+                const idkey = document.getElementById('order-edit-idkey').value;
+                const status = document.getElementById('order-edit-status').value;
+                const name = document.getElementById('order-edit-name').value.trim(); // ดึงค่าชื่อผู้เกี่ยวข้อง
+                const responsible = document.getElementById('order-edit-responsible').value.trim();
+                const adminNote = document.getElementById('order-edit-admin-note').value.trim();
+
+                if (!idkey || !status || !name || !responsible) {
+                    Swal.fire({ icon: 'warning', title: 'คำเตือน', text: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' });
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(WEB_APP_URL_ORDER, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `method=updateOrder&idkey=${encodeURIComponent(idkey)}&status=${encodeURIComponent(status)}&name=${encodeURIComponent(name)}&responsible=${encodeURIComponent(responsible)}&adminNote=${encodeURIComponent(adminNote)}`
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        Swal.fire({ title: 'สำเร็จ', text: result.message, icon: 'success' });
+                        orderCloseModal();
+                        orderFetchData(orderCurrentUserId);
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: result.message });
+                    }
+                } catch (error) {
+                    console.error('Error updating data:', error);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถอัปเดตข้อมูลได้' });
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            });
+
+            window.orderTakeJob = async function (idkey) {
+                if (isOrderSubmitting) return;
+                isOrderSubmitting = true;
+
+                Swal.fire({
+                    title: 'ยืนยันการรับงาน?',
+                    text: `คุณต้องการเปลี่ยนสถานะของ Order ID: ${idkey} เป็น "เริ่มดำเนินการ" ใช่หรือไม่?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'ใช่, รับงาน',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'กำลังอัพเดท...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        try {
+                            const response = await fetch(WEB_APP_URL_ORDER, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: `method=takeJob&idkey=${encodeURIComponent(idkey)}`
+                            });
+                            const resultData = await response.json();
+                            if (resultData.success) {
+                                Swal.fire({ title: 'สำเร็จ', text: resultData.message, icon: 'success' });
+                                orderFetchData(orderCurrentUserId);
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: resultData.message });
+                            }
+                        } catch (error) {
+                            console.error('Error updating data:', error);
+                            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถอัปเดตข้อมูลได้' });
+                        } finally {
+                            isOrderSubmitting = false;
+                        }
+                    } else {
+                        isOrderSubmitting = false;
+                    }
+                });
+            }
+
+            function orderApplyFilters() {
+  const filterName = document.getElementById('order-filter-name').value.toLowerCase();
+  const filterStatus = document.getElementById('order-filter-status').value.toLowerCase();
+  const sortOrder = document.getElementById('order-sort-order').value;
+
+  orderFilteredData = orderTableData.filter(row => {
+    const matchesName = row.Name.toLowerCase().includes(filterName);
+    const matchesStatus = filterStatus ? row.Status.toLowerCase() === filterStatus : true;
+    const matchesUserId = row.UserIDresponsible === orderCurrentUserId;
+    return matchesName && matchesStatus && matchesUserId;
+  });
+
+  // กรองข้อมูล pending (รอดำเนินการ และเริ่มดำเนินการ)
+  const pendingTasks = orderFilteredData.filter(row => {
+    let status = row.Status.toLowerCase();
+    return status === 'รอดำเนินการ' || status === 'เริ่มดำเนินการ';
+  });
+  // ข้อมูลอื่น ๆ ให้ไปอยู่ใน completed table
+  orderCompletedData = orderFilteredData.filter(row => {
+    let status = row.Status.toLowerCase();
+    return status !== 'รอดำเนินการ' && status !== 'เริ่มดำเนินการ';
+  });
+
+  if (sortOrder === 'newest') {
+    pendingTasks.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    orderCompletedData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+  } else if (sortOrder === 'oldest') {
+    pendingTasks.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+    orderCompletedData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+  }
+
+  orderTotalPages = Math.ceil(pendingTasks.length / orderRowsPerPage);
+  currentOrderPage = 1;
+  orderSetupPagination();
+
+  const paginatedData = orderPaginateData(pendingTasks, currentOrderPage);
+  orderDisplayCards(paginatedData);
+  orderDisplayCompletedTable(orderCompletedData);
+}
+
+
+            function orderSetupPagination() {
+                const pageNumbersContainer = document.getElementById('order-page-numbers');
+                pageNumbersContainer.innerHTML = '';
+                for (let i = 1; i <= orderTotalPages; i++) {
+                    const pageButton = document.createElement('button');
+                    pageButton.innerText = i;
+                    pageButton.className = `px-3 py-1 rounded-lg ${i === currentOrderPage ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}`;
+                    pageButton.onclick = () => orderChangePage(i);
+                    pageNumbersContainer.appendChild(pageButton);
+                }
+                document.getElementById('order-prev-page').disabled = currentOrderPage === 1;
+                document.getElementById('order-next-page').disabled = currentOrderPage === orderTotalPages;
+            }
+
+            function orderChangePage(page) {
+                if (page < 1 || page > orderTotalPages) return;
+                currentOrderPage = page;
+                orderSetupPagination();
+                const pendingTasks = orderFilteredData.filter(row => row.Status.toLowerCase() !== 'เสร็จสิ้น');
+                const paginatedData = orderPaginateData(pendingTasks, currentOrderPage);
+                orderDisplayCards(paginatedData);
+            }
+
+            function orderPaginateData(data, page) {
+                const start = (page - 1) * orderRowsPerPage;
+                const end = start + orderRowsPerPage;
+                return data.slice(start, end);
+            }
+
+            window.orderInitialize = function () {
+                orderInitializeLiff();
+                document.getElementById('order-filter-name').addEventListener('input', orderApplyFilters);
+                document.getElementById('order-filter-status').addEventListener('change', orderApplyFilters);
+                document.getElementById('order-sort-order').addEventListener('change', orderApplyFilters);
+            };
+
+            window.addEventListener('load', orderInitialize);
+
+            function orderGetCurrentDateTimeGMT7() {
+                const now = new Date();
+                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const gmt7Time = new Date(utc + (7 * 3600000));
+                const year = gmt7Time.getFullYear();
+                const month = String(gmt7Time.getMonth() + 1).padStart(2, '0');
+                const day = String(gmt7Time.getDate()).padStart(2, '0');
+                const hours = String(gmt7Time.getHours()).padStart(2, '0');
+                const minutes = String(gmt7Time.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+        })();
     /* -------------------- HTML Scripts (Operation Management) -------------------- */
     (function () {
       const WEB_APP_URL_OPERATION = 'https://script.google.com/macros/s/AKfycbxDoJxNMYZSM6LL7XLy86T0oXfEZPFmDfZbYGTf7-HO9ffWj5BKZPrP1M2bTLUfynE/exec';
@@ -394,11 +860,10 @@
         const filterName = document.getElementById('operation-filter-name').value.toLowerCase();
 
         const filteredData = operationTableData.filter(row => {
-          // เปลี่ยนจาก row.status เป็น row["case"] สำหรับการกรองตามเคส
-          const matchesCase = filterStatus ? (row["case"] || '').toLowerCase().includes(filterStatus) : true;
+          const matchesStatus = filterStatus ? row.status.toLowerCase().includes(filterStatus) : true;
           const matchesName = filterName ? (row.Name || '').toLowerCase().includes(filterName) : true;
           const matchesUserId = row.useridresponsible === userId;
-          return matchesCase && matchesName && matchesUserId;
+          return matchesStatus && matchesName && matchesUserId;
         });
 
         filteredData.sort((a, b) => {
@@ -412,13 +877,13 @@
         operationDisplayTasks(filteredData);
       }
 
+      // ฟังก์ชันแสดงรายการงานใน Operation Management
       function operationDisplayTasks(data) {
         const taskList = document.getElementById('operation-task-list');
         const completedTasks = document.getElementById('operation-completed-tasks');
         taskList.innerHTML = '';
         completedTasks.innerHTML = '';
 
-        // ยังคงใช้ row.status สำหรับการแบ่ง pending/completed
         const pendingTasks = data.filter(row => row.status !== 'งานเสร็จสิ้น');
         const completedTaskData = data.filter(row => row.status === 'งานเสร็จสิ้น');
 
@@ -440,21 +905,35 @@
           const card = document.createElement('div');
           card.className = 'border-green rounded-lg p-4 mb-4';
 
+          // ปรับ grid header ให้มี 4 คอลัมน์: สถานะ, เคส, ชื่อ, รายละเอียด
           const header = document.createElement('div');
-          header.className = 'grid grid-cols-3 gap-4 border-b pb-2';
+          header.className = 'grid grid-cols-4 gap-4 border-b pb-2';
 
-          // เปลี่ยนให้แสดง "เคส" แทน "สถานะ"
+          // 1. สถานะ
+          const statusContainer = document.createElement('div');
+          statusContainer.className = 'flex flex-col items-start';
+          const statusLabel = document.createElement('span');
+          statusLabel.textContent = 'สถานะ';
+          statusLabel.className = 'text-sm text-gray-600 mb-1';
+          const statusSpan = document.createElement('span');
+          statusSpan.textContent = row.status;
+          statusSpan.className = 'font-normal text-base';
+          statusContainer.appendChild(statusLabel);
+          statusContainer.appendChild(statusSpan);
+
+          // 2. เคส (เพิ่มใหม่)
           const caseContainer = document.createElement('div');
           caseContainer.className = 'flex flex-col items-start';
           const caseLabel = document.createElement('span');
           caseLabel.textContent = 'เคส';
           caseLabel.className = 'text-sm text-gray-600 mb-1';
           const caseSpan = document.createElement('span');
-          caseSpan.textContent = row["case"] || '-';
+          caseSpan.textContent = row.case || '';
           caseSpan.className = 'font-normal text-base';
           caseContainer.appendChild(caseLabel);
           caseContainer.appendChild(caseSpan);
 
+          // 3. ชื่อ
           const nameContainer = document.createElement('div');
           nameContainer.className = 'flex flex-col items-start';
           const nameLabel = document.createElement('span');
@@ -466,6 +945,7 @@
           nameContainer.appendChild(nameLabel);
           nameContainer.appendChild(nameSpan);
 
+          // 4. รายละเอียด
           const detailsContainer = document.createElement('div');
           detailsContainer.className = 'flex flex-col items-start';
           const detailsLabel = document.createElement('span');
@@ -478,10 +958,12 @@
           detailsContainer.appendChild(detailsLabel);
           detailsContainer.appendChild(detailsButton);
 
+          header.appendChild(statusContainer);
           header.appendChild(caseContainer);
           header.appendChild(nameContainer);
           header.appendChild(detailsContainer);
 
+          // ส่วนของปุ่มการดำเนินการ
           const actionButtons = document.createElement('div');
           actionButtons.className = 'grid grid-cols-4 gap-4 mt-2 text-sm';
 
@@ -505,6 +987,7 @@
           completeButton.textContent = 'งานเสร็จสิ้น';
           completeButton.onclick = () => operationOpenCompleteJobModal(row.idkey);
 
+          // ปรับ disable ปุ่มตามสถานะ (ตัวอย่าง)
           switch (row.status) {
             case 'รอดำเนินการ':
               processButton.disabled = true;
@@ -570,10 +1053,9 @@
         completedTasksHeading.textContent = 'เลื่อน/สำเร็จ';
         completedTasks.appendChild(completedTasksHeading);
 
-        // เปลี่ยน header ของตารางให้แสดง "เคส" แทน "สถานะ"
         const completedHeader = document.createElement('div');
         completedHeader.className = 'flex justify-between font-bold mb-2';
-        completedHeader.innerHTML = `<span>เคส</span><span>ชื่อ</span><span>รายละเอียด</span>`;
+        completedHeader.innerHTML = `<span>สถานะ</span><span>ชื่อ</span><span>รายละเอียด</span>`;
         completedTasks.appendChild(completedHeader);
 
         const startCompleted = (currentPageCompletedOperation - 1) * operationItemsPerPage;
@@ -583,15 +1065,15 @@
         completedToDisplay.forEach(row => {
           const taskItem = document.createElement('div');
           taskItem.className = 'flex justify-between py-2';
-          const caseSpan = document.createElement('span');
-          caseSpan.textContent = row["case"] || '-';
+          const statusSpan = document.createElement('span');
+          statusSpan.textContent = row.status;
           const nameSpan = document.createElement('span');
           nameSpan.textContent = row.Name || '';
           const detailsButton = document.createElement('button');
           detailsButton.className = 'text-blue-500';
           detailsButton.textContent = 'เพิ่มเติม';
           detailsButton.onclick = () => operationOpenViewDetailsModal(row.idkey);
-          taskItem.appendChild(caseSpan);
+          taskItem.appendChild(statusSpan);
           taskItem.appendChild(nameSpan);
           taskItem.appendChild(detailsButton);
           completedTasks.appendChild(taskItem);
@@ -609,7 +1091,8 @@
           const detailsContent = document.getElementById('operation-details-content');
           detailsContent.innerHTML = `
             <p><strong>PO:</strong> ${row.idkey}</p>
-            <p><strong>เคส:</strong> ${row["case"] || '-'}</p>
+            <p><strong>เคส:</strong> ${row.case || ''}</p>
+            <p><strong>สถานะ:</strong> ${row.status}</p>
             <p><strong>เวลาเริ่มงาน (กำลังเดินทาง):</strong> ${operationFormatDateToDDMMYYYYHHmm(row.timeInside)}</p>
             <p><strong>หมายเหตุ:</strong> ${row.insideNote || ''}</p>
             <p><strong>เวลาเมื่อถึงจุดหมาย:</strong> ${operationFormatDateToDDMMYYYYHHmm(row.timeProcess)}</p>
@@ -620,7 +1103,7 @@
             <p><strong>หมายเหตุ:</strong> ${row.compressNote || ''}</p>
             <p><strong>อัพโหลดรูป:</strong> ${row.compressPhoto ? `<a href="${row.compressPhoto}" target="_blank" class="text-blue-500 underline">ดูรูป</a>` : 'ไม่มี'}</p>
             <p><strong>ชื่อ:</strong> ${row.Name || ''}</p>
-            <p><strong>ชื่อผู้ดูแล:</strong> ${row.Responsible || ''}</p>
+            <p><strong>ผู้รับผิดชอบ:</strong> ${row.Responsible || ''}</p>
             <p><strong>ผู้มอบหมาย:</strong> ${row.Admin || ''}</p>
             <p><strong>บันทึกเวลา:</strong> ${operationFormatDateToDDMMYYYYHHmm(row.timestamp)}</p>
           `;
@@ -632,6 +1115,7 @@
         document.getElementById('operation-view-details-modal').classList.add('hidden');
       }
 
+      // Modal สำหรับ "กำลังเดินทาง"
       window.operationOpenStartJobModal = function (idkey) {
         const row = operationTableData.find(row => row.idkey === idkey);
         if (row) {
@@ -686,6 +1170,7 @@
         }
       });
 
+      // Modal สำหรับ "ถึงจุดหมาย"
       window.operationOpenProcessJobModal = function (idkey) {
         const row = operationTableData.find(row => row.idkey === idkey);
         if (row) {
@@ -740,6 +1225,7 @@
         }
       });
 
+      // Modal สำหรับ "กำลังเริ่มงาน"
       window.operationOpenStartWorkModal = function (idkey) {
         const row = operationTableData.find(row => row.idkey === idkey);
         if (row) {
@@ -794,6 +1280,7 @@
         }
       });
 
+      // Modal สำหรับ "งานเสร็จสิ้น"
       window.operationOpenCompleteJobModal = function (idkey) {
         const row = operationTableData.find(row => row.idkey === idkey);
         if (row) {
