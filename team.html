@@ -74,7 +74,7 @@
         <thead class="bg-gray-100">
           <tr>
             <th class="py-2 px-4 border">วันที่</th>
-            <th class="py-2 px-4 border">ชื่อลูกค้า</th>
+            <th class="py-2 px-4 border">ลำดับ</th>
             <th class="py-2 px-4 border">รายละเอียด</th>
           </tr>
         </thead>
@@ -156,7 +156,8 @@
         card.className = "bg-white shadow rounded-lg p-4";
         card.innerHTML = `
           <div class="mb-2"><span class="font-bold text-gray-600">วันที่:</span> ${item.Date}</div>
-          <div class="mb-2"><span class="font-bold text-gray-600">ชื่อลูกค้า:</span> ${item.Name}</div>
+          <div class="mb-2"><span class="font-bold text-gray-600">เคสที่:</span> ${item.Workorder}</div>
+          <div class="mb-2"><span class="font-bold text-gray-600">ลูกค้่:</span> ${item.Name}</div>
           <div class="mb-2"><span class="font-bold text-gray-600">สถานะ:</span> ${item.Status}</div>
           <div class="flex space-x-2">
             <button class="bg-[#33422b] text-white px-3 py-1 rounded" onclick='showDetails(${JSON.stringify(item)})'>รายละเอียด</button>
@@ -183,7 +184,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td class="py-2 px-4 border">${item.Date}</td>
-          <td class="py-2 px-4 border">${item.Name}</td>
+          <td class="py-2 px-4 border">${item.Workorder}</td>
           <td class="py-2 px-4 border">
             <button class="bg-[#33422b] text-white px-3 py-1 rounded" onclick='showDetails(${JSON.stringify(item)})'>รายละเอียด</button>
           </td>
@@ -230,6 +231,10 @@
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd;"><strong>ชื่อ:</strong></td>
               <td style="padding: 8px; border: 1px solid #ddd;">${item.Name}</td>
+            </tr>
+             <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>เคสที่:</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${item.Workorder}</td>
             </tr>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd;"><strong>แผนที่:</strong></td>
