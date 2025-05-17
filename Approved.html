@@ -42,15 +42,29 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKkv_Wq0BKz7i46cDjXL33SJH-ykuxPtQNlgP_HMotrpNa4FgcX-yhAsrSGM3VUg/exec';
     const loadingEl = document.getElementById('loading');
 
-    // สร้าง select options
+    // กำหนดสี option
+    function getOptionStyle(status) {
+      switch(status) {
+        case 'สนทนาอยู่':
+          return 'background-color:#FEF3C7;color:#92400E;';
+        case 'ไม่ตอบกลับ':
+          return 'background-color:#E5E7EB;color:#374151;';
+        case 'ปิดการขาย':
+          return 'background-color:#DCFCE7;color:#14532D;';
+        default:
+          return '';
+      }
+    }
+
+    // สร้าง select options พร้อม style แยกสีแต่ละ option
     function makeOptions(current) {
       const opts = ['สนทนาอยู่','ไม่ตอบกลับ','ปิดการขาย'];
       return opts.map(o =>
-        `<option value="${o}"${o===current?' selected':''}>${o}</option>`
+        `<option value="${o}" style="${getOptionStyle(o)}"${o===current?' selected':''}>${o}</option>`
       ).join('');
     }
 
-    // คืน class badge ตามสถานะ
+    // คืนคลาส badge ตามสถานะ
     function getStatusBadge(status) {
       let base = 'inline-block px-2 py-0.5 rounded-full text-xs font-medium ';
       switch(status) {
@@ -62,6 +76,20 @@
           return base + 'bg-green-100 text-green-800';
         default:
           return base + 'bg-gray-50 text-gray-600';
+      }
+    }
+
+    // คืนคลาส dropdown ตามสถานะ
+    function getDropdownClass(status) {
+      switch(status) {
+        case 'สนทนาอยู่':
+          return 'bg-yellow-50 text-yellow-800';
+        case 'ไม่ตอบกลับ':
+          return 'bg-gray-50 text-gray-800';
+        case 'ปิดการขาย':
+          return 'bg-green-50 text-green-800';
+        default:
+          return 'bg-white text-gray-700';
       }
     }
 
@@ -91,8 +119,8 @@
               </td>
               <td class="px-4 py-3">
                 <select
-                  class="border bg-gray-50 rounded px-2 py-1 text-sm"
-                  onchange="updateStatus(${idx+2}, '${userId}', this.value)"
+                  class="border rounded px-2 py-1 text-sm ${getDropdownClass(status)}"
+                  onchange="onSelectChange(this, ${idx+2}, '${userId}')"
                 >${makeOptions(status)}</select>
               </td>
             `;
@@ -108,10 +136,15 @@
         });
     }
 
-    // อัพเดตสถานะ -> แสดง loading -> รีโหลดข้อมูล
-    function updateStatus(row, userId, newStatus) {
-      loadingEl.classList.remove('hidden');
+    // เมื่อเปลี่ยนค่าใน dropdown
+    function onSelectChange(selectEl, row, userId) {
+      const newStatus = selectEl.value;
 
+      // ปรับสี dropdown
+      selectEl.className = `border rounded px-2 py-1 text-sm ${getDropdownClass(newStatus)}`;
+
+      // แสดง loading และส่งคำขออัพเดต
+      loadingEl.classList.remove('hidden');
       fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -123,20 +156,12 @@
         })
       })
       .then(res => res.json())
-      .then(res => {
-        // ถ้าต้องการ alert ก็ใส่ได้ แต่แนะนำใช้ Toast แทน
-        // alert(res.message);
-        loadData();         // รีเฟรชตาราง
-      })
-      .catch(() => {
-        alert('อัปเดตไม่สำเร็จ กรุณาลองใหม่');
-      })
-      .finally(() => {
-        loadingEl.classList.add('hidden');
-      });
+      .then(() => loadData())
+      .catch(() => alert('อัปเดตไม่สำเร็จ กรุณาลองใหม่'))
+      .finally(() => loadingEl.classList.add('hidden'));
     }
 
-    // เรียกครั้งแรก
+    // เรียกครั้งแรกตอนโหลดหน้า
     loadData();
   </script>
 </body>
