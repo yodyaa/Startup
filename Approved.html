@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,86 +8,119 @@
 </head>
 <body class="bg-gray-100 text-sm">
   <div class="max-w-4xl mx-auto p-4">
-    <h1 class="text-xl font-bold mb-4">📋 จัดการสถานะลูกค้า</h1>
-    <div id="table-container" class="overflow-x-auto bg-white rounded shadow p-2">กำลังโหลดข้อมูล...</div>
+    <h1 class="text-xl font-bold mb-4">Daily Customer</h1>
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+      <table class="min-w-full table-auto text-left">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-4 py-2">วันที่</th>
+            <th class="px-4 py-2">displayname</th>
+            <th class="px-4 py-2">สถานะ</th>
+            <th class="px-4 py-2">คำสั่ง</th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="divide-y">
+          <tr>
+            <td colspan="4" class="px-4 py-6 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKkv_Wq0BKz7i46cDjXL33SJH-ykuxPtQNlgP_HMotrpNa4FgcX-yhAsrSGM3VUg/exec';
 
-    fetch(SCRIPT_URL + '?method=getDaily')
+    function makeOptions(current) {
+      const opts = ['สนทนาอยู่','ไม่ตอบกลับ','ปิดการขาย'];
+      return opts.map(o => 
+        `<option value="${o}"${o===current?' selected':''}>${o}</option>`
+      ).join('');
+    }
+
+    // คืน class ตามสถานะ
+    function getStatusBadge(status) {
+      let base = 'inline-block px-2 py-0.5 rounded-full text-xs font-medium ';
+      switch(status) {
+        case 'สนทนาอยู่':
+          return base + 'bg-yellow-100 text-yellow-800';
+        case 'ไม่ตอบกลับ':
+          return base + 'bg-gray-100 text-gray-800';
+        case 'ปิดการขาย':
+          return base + 'bg-green-100 text-green-800';
+        default:
+          return base + 'bg-gray-50 text-gray-600';
+      }
+    }
+
+    fetch(`${SCRIPT_URL}?method=getDaily`)
       .then(res => res.json())
       .then(data => {
-        const table = document.createElement('table');
-        table.className = 'min-w-full table-auto text-left text-xs';
-        const header = ['วันที่', 'เวลา', 'userId', 'ชื่อ', 'ประเภท', 'สถานะ', 'ข้อความล่าสุด', 'อัปเดต'];
-
-        const thead = document.createElement('thead');
-        const headRow = document.createElement('tr');
-        header.forEach(h => {
-          const th = document.createElement('th');
-          th.innerText = h;
-          th.className = 'p-2 bg-gray-200';
-          headRow.appendChild(th);
-        });
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-
-        const tbody = document.createElement('tbody');
-
-        data.forEach((row, index) => {
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
+        data.forEach((row, idx) => {
+          const [date, time, userId, displayname, , status] = row;
           const tr = document.createElement('tr');
-          row.forEach((val, i) => {
-            const td = document.createElement('td');
-            td.innerText = val;
-            td.className = 'p-2 border';
-            tr.appendChild(td);
-          });
 
-          const tdBtn = document.createElement('td');
-          tdBtn.className = 'p-2';
+          // วันที่ + เวลา
+          const tdDate = document.createElement('td');
+          tdDate.className = 'px-4 py-3';
+          tdDate.innerHTML = `
+            <div>${date}</div>
+            <div class="text-gray-500 text-xs">${time}</div>
+          `;
+          tr.appendChild(tdDate);
 
-          const select = document.createElement('select');
-          select.className = 'border rounded px-1 py-0.5';
-          ['สนทนาอยู่', 'ไม่ตอบกลับ', 'ปิดการขาย'].forEach(opt => {
-            const option = document.createElement('option');
-            option.value = opt;
-            option.text = opt;
-            select.appendChild(option);
-          });
-          select.value = row[5];
+          // displayname
+          const tdName = document.createElement('td');
+          tdName.className = 'px-4 py-3';
+          tdName.innerText = displayname;
+          tr.appendChild(tdName);
 
-          const btn = document.createElement('button');
-          btn.innerText = 'อัปเดต';
-          btn.className = 'ml-2 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600';
-          btn.onclick = () => {
-            fetch(SCRIPT_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                method: 'updateStatus',
-                row: index + 2,
-                status: select.value,
-                userId: row[2]
-              })
-            })
-              .then(res => res.json())
-              .then(res => alert(res.message))
-              .catch(err => alert('เกิดข้อผิดพลาด'));
-          };
+          // สถานะ (badge มีสี)
+          const tdStatus = document.createElement('td');
+          tdStatus.className = 'px-4 py-3';
+          tdStatus.innerHTML = `<span class="${getStatusBadge(status)}">${status}</span>`;
+          tr.appendChild(tdStatus);
 
-          tdBtn.appendChild(select);
-          tdBtn.appendChild(btn);
-          tr.appendChild(tdBtn);
+          // คำสั่ง (dropdown)
+          const tdCmd = document.createElement('td');
+          tdCmd.className = 'px-4 py-3';
+          tdCmd.innerHTML = `
+            <select
+              class="border bg-gray-50 rounded px-2 py-1 text-sm"
+              onchange="updateStatus(${idx+2}, '${userId}', this.value)"
+            >${makeOptions(status)}</select>
+          `;
+          tr.appendChild(tdCmd);
+
           tbody.appendChild(tr);
         });
-
-        table.appendChild(tbody);
-        const container = document.getElementById('table-container');
-        container.innerHTML = '';
-        container.appendChild(table);
+      })
+      .catch(() => {
+        document.getElementById('tbody').innerHTML = `
+          <tr>
+            <td colspan="4" class="px-4 py-6 text-center text-red-500">
+              เกิดข้อผิดพลาดในการโหลดข้อมูล
+            </td>
+          </tr>`;
       });
+
+    function updateStatus(row, userId, newStatus) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          method: 'updateStatus',
+          row,
+          status: newStatus,
+          userId
+        })
+      })
+      .then(res => res.json())
+      .then(res => alert(res.message))
+      .catch(() => alert('อัปเดตไม่สำเร็จ กรุณาลองใหม่'));
+    }
   </script>
 </body>
 </html>
-
