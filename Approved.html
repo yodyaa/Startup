@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>จัดการลูกค้า</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-sm">
+  <div class="max-w-4xl mx-auto p-4">
+    <h1 class="text-xl font-bold mb-4">📋 จัดการสถานะลูกค้า</h1>
+    <div id="table-container" class="overflow-x-auto bg-white rounded shadow p-2">กำลังโหลดข้อมูล...</div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKkv_Wq0BKz7i46cDjXL33SJH-ykuxPtQNlgP_HMotrpNa4FgcX-yhAsrSGM3VUg/exec';
+
+    fetch(SCRIPT_URL + '?method=getDaily')
+      .then(res => res.json())
+      .then(data => {
+        const table = document.createElement('table');
+        table.className = 'min-w-full table-auto text-left text-xs';
+        const header = ['วันที่', 'เวลา', 'userId', 'ชื่อ', 'ประเภท', 'สถานะ', 'ข้อความล่าสุด', 'อัปเดต'];
+
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        header.forEach(h => {
+          const th = document.createElement('th');
+          th.innerText = h;
+          th.className = 'p-2 bg-gray-200';
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        data.forEach((row, index) => {
+          const tr = document.createElement('tr');
+          row.forEach((val, i) => {
+            const td = document.createElement('td');
+            td.innerText = val;
+            td.className = 'p-2 border';
+            tr.appendChild(td);
+          });
+
+          const tdBtn = document.createElement('td');
+          tdBtn.className = 'p-2';
+
+          const select = document.createElement('select');
+          select.className = 'border rounded px-1 py-0.5';
+          ['สนทนาอยู่', 'ไม่ตอบกลับ', 'ปิดการขาย'].forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.text = opt;
+            select.appendChild(option);
+          });
+          select.value = row[5];
+
+          const btn = document.createElement('button');
+          btn.innerText = 'อัปเดต';
+          btn.className = 'ml-2 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600';
+          btn.onclick = () => {
+            fetch(SCRIPT_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                method: 'updateStatus',
+                row: index + 2,
+                status: select.value,
+                userId: row[2]
+              })
+            })
+              .then(res => res.json())
+              .then(res => alert(res.message))
+              .catch(err => alert('เกิดข้อผิดพลาด'));
+          };
+
+          tdBtn.appendChild(select);
+          tdBtn.appendChild(btn);
+          tr.appendChild(tdBtn);
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        const container = document.getElementById('table-container');
+        container.innerHTML = '';
+        container.appendChild(table);
+      });
+  </script>
+</body>
+</html>
+
