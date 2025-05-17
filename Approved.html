@@ -1,40 +1,19 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>จัดการลูกค้า</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* ซ่อน native arrow ของ select */
-    .custom-select {
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      background-size: 1em 0.6em;
-      padding-right: 2.5rem; /* เว้นที่ให้ arrow */
-      width: 100%;
-    }
-    /* custom option styling */
-    .custom-select option {
-      width: 100%;
-      padding: 0.5em 1em;
-    }
-    .opt-speak { background-color: #FEF3C7; color: #92400E; }
-    .opt-no-reply { background-color: #E5E7EB; color: #374151; }
-    .opt-close { background-color: #DCFCE7; color: #14532D; }
-  </style>
 </head>
 <body class="bg-gray-100 text-sm relative">
 
   <!-- Loading Overlay -->
-  <div id="loading" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-20">
+  <div id="loading" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
     <svg class="w-12 h-12 animate-spin text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor"
-        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z">
+      </path>
     </svg>
   </div>
 
@@ -63,41 +42,64 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKkv_Wq0BKz7i46cDjXL33SJH-ykuxPtQNlgP_HMotrpNa4FgcX-yhAsrSGM3VUg/exec';
     const loadingEl = document.getElementById('loading');
 
+    // กำหนดสี option
+    function getOptionStyle(status) {
+      switch(status) {
+        case 'สนทนาอยู่':
+          return 'background-color:#FEF3C7;color:#92400E;';
+        case 'ไม่ตอบกลับ':
+          return 'background-color:#E5E7EB;color:#374151;';
+        case 'ปิดการขาย':
+          return 'background-color:#DCFCE7;color:#14532D;';
+        default:
+          return '';
+      }
+    }
+
+    // สร้าง select options พร้อม style แยกสีแต่ละ option
     function makeOptions(current) {
-      const opts = [
-        { value: 'สนทนาอยู่', cls: 'opt-speak' },
-        { value: 'ไม่ตอบกลับ', cls: 'opt-no-reply' },
-        { value: 'ปิดการขาย', cls: 'opt-close' }
-      ];
+      const opts = ['สนทนาอยู่','ไม่ตอบกลับ','ปิดการขาย'];
       return opts.map(o =>
-        `<option value="${o.value}" class="${o.cls}"${o.value===current?' selected':''}>${o.value}</option>`
+        `<option value="${o}" style="${getOptionStyle(o)}"${o===current?' selected':''}>${o}</option>`
       ).join('');
     }
 
+    // คืนคลาส badge ตามสถานะ
     function getStatusBadge(status) {
       let base = 'inline-block px-2 py-0.5 rounded-full text-xs font-medium ';
       switch(status) {
-        case 'สนทนาอยู่': return base + 'bg-yellow-100 text-yellow-800';
-        case 'ไม่ตอบกลับ': return base + 'bg-gray-100 text-gray-800';
-        case 'ปิดการขาย': return base + 'bg-green-100 text-green-800';
-        default: return base + 'bg-gray-50 text-gray-600';
+        case 'สนทนาอยู่':
+          return base + 'bg-yellow-100 text-yellow-800';
+        case 'ไม่ตอบกลับ':
+          return base + 'bg-gray-100 text-gray-800';
+        case 'ปิดการขาย':
+          return base + 'bg-green-100 text-green-800';
+        default:
+          return base + 'bg-gray-50 text-gray-600';
       }
     }
 
+    // คืนคลาส dropdown ตามสถานะ
     function getDropdownClass(status) {
       switch(status) {
-        case 'สนทนาอยู่': return 'bg-yellow-50 text-yellow-800';
-        case 'ไม่ตอบกลับ': return 'bg-gray-50 text-gray-800';
-        case 'ปิดการขาย': return 'bg-green-50 text-green-800';
-        default: return 'bg-white text-gray-700';
+        case 'สนทนาอยู่':
+          return 'bg-yellow-50 text-yellow-800';
+        case 'ไม่ตอบกลับ':
+          return 'bg-gray-50 text-gray-800';
+        case 'ปิดการขาย':
+          return 'bg-green-50 text-green-800';
+        default:
+          return 'bg-white text-gray-700';
       }
     }
 
+    // โหลดและแสดงข้อมูล
     function loadData() {
       const tbody = document.getElementById('tbody');
       tbody.innerHTML = `<tr>
         <td colspan="4" class="px-4 py-6 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
       </tr>`;
+
       fetch(`${SCRIPT_URL}?method=getDaily`)
         .then(res => res.json())
         .then(data => {
@@ -105,6 +107,7 @@
           data.forEach((row, idx) => {
             const [date, time, userId, displayname, , status] = row;
             const tr = document.createElement('tr');
+
             tr.innerHTML = `
               <td class="px-4 py-3">
                 <div>${date}</div>
@@ -116,10 +119,11 @@
               </td>
               <td class="px-4 py-3">
                 <select
-                  class="custom-select border rounded px-2 py-1 text-sm ${getDropdownClass(status)}"
+                  class="border rounded px-2 py-1 text-sm ${getDropdownClass(status)}"
                   onchange="onSelectChange(this, ${idx+2}, '${userId}')"
                 >${makeOptions(status)}</select>
-              </td>`;
+              </td>
+            `;
             tbody.appendChild(tr);
           });
         })
@@ -132,9 +136,14 @@
         });
     }
 
+    // เมื่อเปลี่ยนค่าใน dropdown
     function onSelectChange(selectEl, row, userId) {
       const newStatus = selectEl.value;
-      selectEl.className = `custom-select border rounded px-2 py-1 text-sm ${getDropdownClass(newStatus)}`;
+
+      // ปรับสี dropdown
+      selectEl.className = `border rounded px-2 py-1 text-sm ${getDropdownClass(newStatus)}`;
+
+      // แสดง loading และส่งคำขออัพเดต
       loadingEl.classList.remove('hidden');
       fetch(SCRIPT_URL, {
         method: 'POST',
@@ -152,6 +161,7 @@
       .finally(() => loadingEl.classList.add('hidden'));
     }
 
+    // เรียกครั้งแรกตอนโหลดหน้า
     loadData();
   </script>
 </body>
