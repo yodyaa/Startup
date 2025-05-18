@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Customer Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .tab-active { @apply border-b-2 border-blue-500 text-blue-600; }
+  </style>
+</head>
+<body class="relative bg-gray-100 text-gray-800 min-h-screen">
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay"
+       class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xl z-50 hidden">
+    กำลังโหลด...รอสักครู่
+  </div>
+
+  <!-- HEADER + SECTION TABS -->
+  <header class="bg-[#174d27] shadow">
+    <div class="container text-[#cadec3] mx-auto flex items-center justify-between px-4 py-3">
+      <h1 class="text-2xl font-semibold">Customer Dashboard</h1>
+      <nav class="flex space-x-4">
+        <button class="tab-btn tab-active" data-tab="daily">Customerdaily</button>
+        <button class="tab-btn"       data-tab="customer">Customer</button>
+        <button class="tab-btn"       data-tab="report">Report</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="container mx-auto px-4 py-6 space-y-6">
+
+    <!-- SECTION A: Customerdaily -->
+    <section id="tab-daily" class="tab-content">
+      <h2 class="text-xl mb-3">📥 ข้อมูลลูกค้าที่ทักเข้ามา</h2>
+      <div class="bg-white rounded shadow p-4 overflow-x-auto max-h-80 overflow-y-auto">
+        <table class="min-w-full table-auto text-sm">
+          <thead class="bg-gray-50 sticky top-0 text-left"><tr>
+            <th class="px-2 py-1">วันที่</th>
+            <th class="px-2 py-1">เวลา</th>
+            <th class="px-2 py-1">displayName</th>
+            <th class="px-2 py-1">ประเภทลูกค้า</th>
+            <th class="px-2 py-1">สถานะ</th>
+            <th class="px-2 py-1">ข้อความล่าสุด</th>
+            <th class="px-2 py-1">หมายเหตุ</th>
+          </tr></thead>
+          <tbody id="dailyTableBody" class="divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+      <div class="flex justify-center items-center gap-2 mt-3">
+        <button id="prevPage" class="px-3 py-1 bg-gray-200 rounded">Prev</button>
+        <span id="pageInfo"></span>
+        <button id="nextPage" class="px-3 py-1 bg-gray-200 rounded">Next</button>
+      </div>
+    </section>
+
+    <!-- SECTION B: Customer -->
+    <section id="tab-customer" class="tab-content hidden">
+      <h2 class="text-xl mb-3">💰 บันทึกการขาย</h2>
+      <div class="flex justify-end mb-2">
+        <!-- Export CSV now includes userId -->
+        <button id="exportCustomerCsv" class="px-3 py-1 bg-blue-500 text-white rounded">
+          Export CSV
+        </button>
+      </div>
+      <div class="bg-white rounded shadow p-4 overflow-x-auto max-h-60 overflow-y-auto">
+        <table id="customerTable" class="min-w-full table-auto text-sm">
+          <thead class="bg-gray-50 sticky top-0 text-left"><tr>
+            <th class="px-2 py-1">วันที่</th>
+            <th class="px-2 py-1">เวลา</th>
+            <th class="px-2 py-1">displayName</th>
+            <th class="px-2 py-1">สถานะ</th>
+            <th class="px-2 py-1">ประเภทลูกค้า</th>
+          </tr></thead>
+          <tbody id="customerTableBody" class="divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION C: Report -->
+    <section id="tab-report" class="tab-content hidden">
+      <h2 class="text-xl mb-3">📊 รายงานสรุปตามสถานะ</h2>
+      <div class="mb-4">
+        <nav class="flex space-x-4">
+          <button class="period-btn tab-active py-1 px-2" data-period="daily">รายวัน</button>
+          <button class="period-btn py-1 px-2" data-period="monthly">รายเดือน</button>
+          <button class="period-btn py-1 px-2" data-period="quarterly">รายไตรมาส</button>
+          <button class="period-btn py-1 px-2" data-period="yearly">รายปี</button>
+        </nav>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <div class="bg-blue-50 rounded p-3 text-center">
+          <p class="text-sm">รวมลูกค้า</p><p id="kpiTotal" class="text-2xl font-bold">0</p>
+        </div>
+        <div class="bg-green-50 rounded p-3 text-center">
+          <p class="text-sm">ลูกค้าใหม่</p><p id="kpiNew" class="text-2xl font-bold">0</p>
+        </div>
+        <div class="bg-yellow-50 rounded p-3 text-center">
+          <p class="text-sm">ปิดการขาย</p><p id="kpiClosed" class="text-2xl font-bold">0</p>
+        </div>
+        <div class="bg-red-50 rounded p-3 text-center">
+          <p class="text-sm">Conversion Rate</p><p id="kpiRate" class="text-2xl font-bold">0%</p>
+        </div>
+      </div>
+      <div class="mb-4">
+        <canvas id="conversionChart" height="100"></canvas>
+      </div>
+      <div class="flex justify-end mb-2">
+        <button id="exportReportCsv" class="px-3 py-1 bg-blue-500 text-white rounded">
+          Export CSV
+        </button>
+      </div>
+      <div class="bg-white rounded shadow p-4 overflow-x-auto">
+        <table id="reportTable" class="min-w-full table-auto text-sm">
+          <thead id="reportHeader" class="bg-gray-50 sticky top-0 text-left"></thead>
+          <tbody id="reportBody" class="divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_URL        = 'https://script.google.com/macros/s/AKfycbzU1aZlMWl_bAafUMVx6RM8BBvsml_jWt1k5LQpGNpHX2d1Ac7eLeZizEA8yxUu5KP3/exec';
+    const STATUS_OPTIONS = ['ไม่ตอบกลับ','สนทนาอยู่','ปิดการขาย'];
+    let dailyData=[], customerData=[], reportData=[];
+    let currentPage=1, rowsPerPage=10;
+
+    // Loading overlay
+    function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+    // Format helpers
+    const pad = v => String(v).padStart(2,'0');
+    function fmtDate(v){ const d=new Date(v); return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`; }
+    function fmtTime(v){ const d=new Date(v); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+
+    // Status color
+    function statusClass(s) {
+      if (s==='ปิดการขาย') return 'bg-green-100 text-green-800';
+      if (s==='สนทนาอยู่')  return 'bg-yellow-100 text-yellow-800';
+      if (s==='ไม่ตอบกลับ') return 'bg-red-100 text-red-800';
+      return '';
+    }
+
+    // Fetch GET
+    async function fetchSheet(name){
+      const res = await fetch(`${API_URL}?sheet=${name}`);
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    }
+
+    // Fetch POST no-cors
+    function postUpdate(rowIndex,newStatus){
+      fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action:'updateStatus', rowIndex, newStatus })
+      });
+    }
+
+    // Render Customerdaily
+    function renderDaily(){
+      const start = (currentPage-1)*rowsPerPage;
+      const page = dailyData.slice(start, start+rowsPerPage);
+      document.getElementById('dailyTableBody').innerHTML = page.map((r,i)=>{
+        const gi = start + i;
+        return `
+          <tr class="odd:bg-white even:bg-gray-50">
+            <td class="px-2 py-1">${fmtDate(r[0])}</td>
+            <td class="px-2 py-1">${fmtTime(r[1])}</td>
+            <td class="px-2 py-1">${r[3]}</td>
+            <td class="px-2 py-1">${r[4]}</td>
+            <td class="px-2 py-1 ${statusClass(r[5])}">
+              <select onchange="onStatusChange(${gi}, this.value)" class="bg-transparent border-0 focus:ring-0">
+                ${STATUS_OPTIONS.map(s=>
+                  `<option value="${s}" ${r[5]===s?'selected':''}>${s}</option>`
+                ).join('')}
+              </select>
+            </td>
+            <td class="px-2 py-1">${r[6]||''}</td>
+            <td class="px-2 py-1">${r[7]||''}</td>
+          </tr>`;
+      }).join('');
+      document.getElementById('pageInfo').innerText =
+        `หน้า ${currentPage} / ${Math.ceil(dailyData.length/rowsPerPage)}`;
+    }
+    document.getElementById('prevPage').onclick = ()=>{ if(currentPage>1){ currentPage--; renderDaily(); }};
+    document.getElementById('nextPage').onclick = ()=>{ if(currentPage*rowsPerPage<dailyData.length){ currentPage++; renderDaily(); }};
+
+    // Handle status change
+    async function onStatusChange(idx,val){
+      showLoading();
+      dailyData[idx][5] = val;
+      postUpdate(idx,val);
+      renderDaily();
+      if (val==='ปิดการขาย') {
+        customerData = await fetchSheet('Customer');
+        renderCustomer();
+      }
+      hideLoading();
+    }
+
+    // Render Customer
+    function renderCustomer(){
+      document.getElementById('customerTableBody').innerHTML = customerData.map(r=>`
+        <tr class="odd:bg-white even:bg-gray-50">
+          <td class="px-2 py-1">${fmtDate(r[0])}</td>
+          <td class="px-2 py-1">${fmtTime(r[1])}</td>
+          <td class="px-2 py-1">${r[3]}</td>
+          <td class="px-2 py-1 ${statusClass(r[4])}">${r[4]}</td>
+          <td class="px-2 py-1">${r[5]}</td>
+        </tr>`).join('');
+    }
+
+    // Group & render report
+    function monthKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
+    function quarterKey(d){ return `${d.getFullYear()} Q${Math.floor(d.getMonth()/3)+1}`; }
+    function yearKey(d){ return `${d.getFullYear()}`; }
+    function groupData(period){
+      const map = new Map();
+      reportData.forEach(r=>{
+        const d = new Date(r[0]); let key;
+        if (period==='daily')      key=fmtDate(r[0]);
+        else if (period==='monthly')   key=monthKey(d);
+        else if (period==='quarterly') key=quarterKey(d);
+        else if (period==='yearly')    key=yearKey(d);
+        if (!map.has(key)) map.set(key,{total:0,oldC:0,newC:0,closed:0,noresp:0});
+        const o = map.get(key);
+        o.total  += +r[1];
+        o.oldC   += +r[2];
+        o.newC   += +r[3];
+        o.closed += +r[4];
+        o.noresp += +r[5];
+      });
+      return Array.from(map.entries())
+        .sort((a,b)=> new Date(a[0].replace(' Q','-01')) - new Date(b[0].replace(' Q','-01')))
+        .map(([k,v])=>{
+          const rate = v.total ? Math.round(v.closed/v.total*100) : 0;
+          return { period:k, ...v, rate:`${rate}%` };
+        });
+    }
+
+    function renderReportTable(period){
+      const data = groupData(period);
+      document.getElementById('reportHeader').innerHTML = `
+        <tr>
+          <th class="px-2 py-1">ช่วงเวลา</th>
+          <th class="px-2 py-1">รวมลูกค้า</th>
+          <th class="px-2 py-1">ลูกค้าเก่า</th>
+          <th class="px-2 py-1">ลูกค้าใหม่</th>
+          <th class="px-2 py-1">ปิดการขาย</th>
+          <th class="px-2 py-1">ไม่ตอบกลับ</th>
+          <th class="px-2 py-1">Conversion</th>
+        </tr>`;
+      document.getElementById('reportBody').innerHTML = data.map(x=>`
+        <tr class="odd:bg-white even:bg-gray-50">
+          <td class="px-2 py-1">${x.period}</td>
+          <td class="px-2 py-1">${x.total}</td>
+          <td class="px-2 py-1">${x.oldC}</td>
+          <td class="px-2 py-1">${x.newC}</td>
+          <td class="px-2 py-1">${x.closed}</td>
+          <td class="px-2 py-1">${x.noresp}</td>
+          <td class="px-2 py-1">${x.rate}</td>
+        </tr>`).join('');
+      const last = data[data.length-1]||{total:0,newC:0,closed:0,rate:'0%'};
+      document.getElementById('kpiTotal').innerText  = last.total;
+      document.getElementById('kpiNew').innerText    = last.newC;
+      document.getElementById('kpiClosed').innerText = last.closed;
+      document.getElementById('kpiRate').innerText   = last.rate;
+      const labels = data.map(x=>x.period), vals = data.map(x=>parseFloat(x.rate));
+      const ctx = document.getElementById('conversionChart').getContext('2d');
+      if (window.convChart) window.convChart.destroy();
+      window.convChart = new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Conversion %',data:vals}]},options:{scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}});
+    }
+
+    // Export CSV for customer (with userId) and report
+    function downloadArrayCSV(header, rows, filename) {
+      let csv = '\uFEFF' + header.map(h=>`"${h}"`).join(',') + '\r\n';
+      rows.forEach(r=>{
+        csv += r.map(cell=>`"${cell}"`).join(',') + '\r\n';
+      });
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+    }
+
+    document.getElementById('exportCustomerCsv').addEventListener('click', () => {
+      // customerData rows: [date, time, userId, displayName, status, type]
+      const header = ['วันที่','เวลา','userId','displayName','สถานะ','ประเภทลูกค้า'];
+      downloadArrayCSV(header, customerData, 'Customer.csv');
+    });
+
+    document.getElementById('exportReportCsv').addEventListener('click', () => {
+      // reportTable DOM export still works for report
+      const rows = Array.from(document.querySelectorAll('#reportTable tr'));
+      const csv = '\uFEFF' + rows.map(r=>{
+        return Array.from(r.querySelectorAll('th,td'))
+          .map(c=>`"${c.innerText.replace(/"/g,'""')}"`).join(',');
+      }).join('\r\n');
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'Report.csv';
+      link.click();
+    });
+
+    // Init + tab handlers
+    async function init(){
+      showLoading();
+      dailyData    = await fetchSheet('Customerdaily');
+      customerData = await fetchSheet('Customer');
+      reportData   = await fetchSheet('DailyReportByStatus');
+      renderDaily(); renderCustomer(); renderReportTable('daily');
+      hideLoading();
+    }
+    document.querySelectorAll('.tab-btn').forEach(b=>
+      b.addEventListener('click',()=>{
+        document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('tab-active'));
+        b.classList.add('tab-active');
+        document.querySelectorAll('.tab-content').forEach(s=>s.classList.add('hidden'));
+        document.getElementById('tab-'+b.dataset.tab).classList.remove('hidden');
+      })
+    );
+    document.querySelectorAll('.period-btn').forEach(b=>
+      b.addEventListener('click',()=>{
+        document.querySelectorAll('.period-btn').forEach(x=>x.classList.remove('tab-active'));
+        b.classList.add('tab-active');
+        renderReportTable(b.dataset.period);
+      })
+    );
+    init();
+  </script>
+</body>
+</html>
