@@ -14,35 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- LIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2.1/liff.js"></script>
-    <script>
-        // ฟังก์ชันสำหรับตรวจสอบและแสดงข้อความสั้นๆ ตาม user agent
-        function getDeviceType() {
-            const ua = navigator.userAgent;
-            if (/android/i.test(ua)) {
-                return "(ANDROID)";
-            } else if (/iPhone|iPad|iPod/i.test(ua)) {
-                return "(IOS)";
-            } else if (/Windows/i.test(ua)) {
-                return "(WINDOW)";
-            } else if (/Macintosh/i.test(ua)) {
-                return "(MAC)";
-            } else {
-                return "(UNKNOWN)";
-            }
-        }
-        document.addEventListener('DOMContentLoaded', function () {
-            // ตรวจสอบว่าเปิดผ่าน LINE (มือถือ) หรือไม่
-            if (!navigator.userAgent.includes('Line')) {
-                const deviceType = getDeviceType();
-                document.body.innerHTML = `
-          <div class="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-4">
-            <h1 class="text-2xl font-bold mb-4">ขออภัย กรุณาเปิดใน LINE ของมือถือน้าา~</h1>
-            <p class="text-lg">คุณกำลังใช้งานผ่าน: ${deviceType}</p>
-          </div>
-        `;
-            }
-        });
-    </script>
 
     <style>
         .bg-green-custom {
