@@ -513,7 +513,7 @@
                 }
 
                 try {
-                    const response = await fetch(WEB_APP_URL_OPERATION, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                    const response = await fetch(WEB_APP_URL_OPERATION, { method: 'POST', body });
                     const result = await response.json();
                     if (result.success) {
                         Swal.fire({ title: 'สำเร็จ', text: result.message, icon: 'success', timer: 1500 });
