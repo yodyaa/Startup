@@ -224,7 +224,6 @@
             const WEB_APP_URL_OPERATION = 'https://script.google.com/macros/s/AKfycbxDoJxNMYZSM6LL7XLy86T0oXfEZPFmDfZbYGTf7-HO9ffWj5BKZPrP1M2bTLUfynE/exec'; // เปลี่ยนเป็น URL ของ Google Apps Script Web App ของคุณ
             const LIFF_ID_OPERATION = '2006578535-R0jx0o7n'; // เปลี่ยนเป็น LIFF ID ของคุณ
  
-
             let operationCurrentUserId = '';
             let operationTableData = [];
             let currentPagePendingOperation = 1;
@@ -274,8 +273,9 @@
                     document.getElementById('operation-loading-message').style.display = 'none';
                 }
             }
-
-            function operationApplyFilters(userId = operationCurrentUserId) {
+            
+            // CORRECTED: Attach to window object
+            window.operationApplyFilters = function(userId = operationCurrentUserId) {
                 const filterStatus = document.getElementById('operation-filter-status').value.toLowerCase();
                 const filterName = document.getElementById('operation-filter-name').value.toLowerCase();
 
@@ -833,98 +833,6 @@
                 paginationDiv.appendChild(prevButton);
                 paginationDiv.appendChild(nextButton);
                 return paginationDiv;
-            }
-
-            function createTimelineSteps(params) {
-                const steps = [];
-                const timelineSteps = [
-                    {
-                        title: "กำลังเดินทาง",
-                        datetime: params.timeInside,
-                        note: params.insideNote
-                    },
-                    {
-                        title: "ถึงจุดหมาย",
-                        datetime: params.timeProcess,
-                        note: params.processNote
-                    },
-                    {
-                        title: "กำลังเริ่มงาน",
-                        datetime: params.timeStart,
-                        note: params.startNote
-                    },
-                    {
-                        title: "งานเสร็จสิ้น",
-                        datetime: params.timeCompress,
-                        note: params.compressNote
-                    }
-                ];
-                timelineSteps.forEach((step, index) => {
-                    if (step.datetime || step.note) {
-                        const { date, time } = formatDateTime(step.datetime);
-                        steps.push({
-                            type: "box",
-                            layout: "horizontal",
-                            margin: "md",
-                            contents: [
-                                {
-                                    type: "box",
-                                    layout: "vertical",
-                                    contents: [
-                                        { type: "text", text: date, size: "sm", color: "#333333", align: "start" },
-                                        { type: "text", text: time, size: "sm", color: "#333333", align: "start" }
-                                    ],
-                                    flex: 2
-                                },
-                                {
-                                    type: "box",
-                                    layout: "vertical",
-                                    contents: [
-                                        {
-                                            type: "box",
-                                            layout: "vertical",
-                                            contents: [],
-                                            width: "12px",
-                                            height: "12px",
-                                            borderWidth: "2px",
-                                            borderColor: "#1DB446",
-                                            cornerRadius: "30px",
-                                            backgroundColor: "#ffffff"
-                                        },
-                                        ...(index < timelineSteps.length - 1 ? [{
-                                            type: "box",
-                                            layout: "vertical",
-                                            contents: [],
-                                            width: "2px",
-                                            height: "40px",
-                                            backgroundColor: "#B7B7B7"
-                                        }] : [])
-                                    ],
-                                    flex: 1,
-                                    alignItems: "center"
-                                },
-                                {
-                                    type: "box",
-                                    layout: "vertical",
-                                    contents: [
-                                        { type: "text", text: step.title, size: "sm", weight: "bold", color: "#000000", wrap: true },
-                                        { type: "text", text: `📝 ${step.note || '-'}`, size: "sm", color: "#333333", wrap: true }
-                                    ],
-                                    flex: 4
-                                }
-                            ]
-                        });
-                    }
-                });
-                return steps;
-            }
-
-            function formatDateTime(datetime) {
-                if (!datetime) return { date: '-', time: '-' };
-                const dateObj = new Date(datetime);
-                const date = dateObj.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-                const time = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                return { date, time };
             }
             
             // Initialize the page on load
